@@ -47,7 +47,6 @@
             countDown -= updateTime;
 
             timeBar.width -= subTimeBar;
-            // timeBar.x += subTimeBar;
 
             if (countDown <= 0) {
                 gameOver();
@@ -148,7 +147,7 @@
     ;(function(global) {
 
         global.process = {
-            tick : 1,
+            tick : 0,
             nextTick : function(fn, args) {
                 return setTimeout(function() {
                     return fn.apply(global, args);
