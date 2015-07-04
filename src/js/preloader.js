@@ -29,6 +29,11 @@
 
             this.load.bitmapFont('font', 'src/img/font.png', 'src/xml/font.xml');
             this.load.bitmapFont('font-big', 'src/img/font-big.png', 'src/xml/font-big.xml');
+
+            this.load.audio('score', 'src/sound/score.m4a');  
+            this.load.audio('move-invalid', 'src/sound/move-invalid.mp3');  
+            this.load.audio('explosion', 'src/sound/explosion.m4a');  
+            
         },
 
         create: function(){

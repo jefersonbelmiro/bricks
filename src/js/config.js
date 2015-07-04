@@ -1,7 +1,7 @@
 ;(function(exports) {
 
-    var block = {
-        margin: 4,
+    var brick = {
+        margin: 10, //4,
         width : 104,
         height : 104,
     };
@@ -15,8 +15,8 @@
         y: topBar.height,
         rows: 8,
         cols : 6,
-        celWidth : block.width + block.margin,
-        celHeight : block.height + block.margin,
+        celWidth : brick.width + brick.margin,
+        celHeight : brick.height + brick.margin,
     };
 
     board.width = board.cols * board.celWidth; 
@@ -42,7 +42,7 @@
 
         minScore : 3,
 
-        block : block,
+        brick : brick,
         board : board,
         timeBar : timeBar,
 
