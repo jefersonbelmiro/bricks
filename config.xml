@@ -1,0 +1,16 @@
+<widget id="com.belmiro.bricks" version="0.0.1">
+    <name>Bricks</name>
+    <description>
+        pixel bricks game
+    </description>
+    <author email="jeferson.belmiro@gmail.com" href="http://jeferson.belmiro.com">
+        pixel bricks team
+    </author>
+    <content src="index.html" />
+    <access origin="*" />
+    <preference name="orientation" value="portrait" />
+    <preference name="permissions" value="none" />
+    <platform name="android">
+        <preference name="orientation" value="portrait" />
+    </platform>
+</widget>
