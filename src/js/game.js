@@ -1,26 +1,26 @@
 // ;(function(global) {
-
-    global = this;
-    'use strict';
+//
+//     'use strict';
+    var global = this;
 
     var 
         game, 
-        entities, bricksGroup, scoreNumberGroup, bombGroup,
+        entities, bricksGroup, scoreNumberGroup, 
         bricks = {}, selectedBrick,  
         currentstate, STATES = { PAUSED: 'paused', PLAY: 'play', SCORE: 'score', GAME_OVER: 'game_over' }, 
         fpsText, scoreText,
-        score = 0, best = 0, 
+        score = 0, best = localStorage.getItem('best') || 0, 
         sounds,
         btnPause,
         timeBar, countDownTimer, countDown,
-        pointer = { start : null, end : null } 
+        pointer = { start : null, end : null },
+        temporaryObjects
     ;
 
     function createBoard() {
 
         bricksGroup = game.add.group();
         scoreNumberGroup = game.add.group();
-        bombGroup = game.add.group();
         
         bricksGroup.position.setTo(Config.board.x, Config.board.y);
         scoreNumberGroup.position.setTo(bricksGroup.x, bricksGroup.y);
@@ -34,9 +34,10 @@
             }
         }
 
+        createTimeBar();
+
         entities.add(bricksGroup);
         entities.add(scoreNumberGroup);
-        createTimeBar();
 
         removeInitialMatches();
         createDropAnimationStart(); 
@@ -45,60 +46,54 @@
     function createTimeBar() {
 
         countDown = Config.timeBar.countDown;
-
-        var updateTime = 1/15;
-        var percent = updateTime / Config.timeBar.countDown * 100;
-        var subTimeBar = Config.timeBar.width * percent/100;
+        console.log('createTimeBar', countDown);
 
         if (!timeBar) {
             timeBar = game.add.tileSprite(
                 Config.timeBar.x, Config.timeBar.y, Config.timeBar.width, Config.timeBar.height, 'time-bar'
             ); 
+            entities.add(timeBar);
         }
-
+        
         timeBar.width = Config.timeBar.width;
         timeBar.height = Config.timeBar.height;
 
+        timeBar.updateTime = 1/15;
+        timeBar.percent = timeBar.updateTime / countDown * 100;
+        timeBar.subTimeBar = timeBar.width * timeBar.percent/100; 
+
         if (countDownTimer) {
-            return false;
-        }
+            countDownTimer.destroy();
+            console.log('countDownTimer', countDownTimer)
+            // return countDownTimer.resume();
+        } 
+
         countDownTimer = game.time.create(false);
-        countDownTimer.loop(updateTime * Phaser.Timer.SECOND, function() {
+        countDownTimer.loop(timeBar.updateTime * Phaser.Timer.SECOND, function() {
 
-            console.log('countDownTimer');
-            countDown -= updateTime;
-
-            timeBar.width -= subTimeBar;
+            countDown -= timeBar.updateTime;
+            timeBar.width -= timeBar.subTimeBar;
+            console.log('ha');
 
             if (countDown <= 0) {
                 gameOver();
-                countDownTimer.pause();
             }
 
         });
         countDownTimer.start(); 
     }
 
-    function createBrickBomb(row, col) {
+    function createSpecialBrick(row, col) {
 
-        var brick = createBrick(row, col);
-        var bomb = createBomb(0, 0);
-        brick.addChild(bomb);
-        brick._type = 'bomb';
+        var types = ['bomb', 'double', 'clock'];
+        var type = types[game.rnd.integerInRange(0, types.length - 1)];
+        var brick = createBrick(row, col, type);
+        var special = game.add.sprite(0, 0, type);
+
+        brick.addChild(special);
         return brick;
     }
 
-    function createBomb(x, y) {
-
-        var bomb = bombGroup.getFirstDead();
-
-        if (!bomb) {
-            bomb = bombGroup.create(0, 0, 'bomb');
-        }
-
-        return bomb;
-    }
-    
     function createCircle(radius, color, borderColor) {
 
         var border = 5;
@@ -119,7 +114,7 @@
     function createRect(width, height, color) {
 
         var bmd = game.add.bitmapData(width, height);
-         
+
         bmd.ctx.beginPath();
         bmd.ctx.rect(0, 0, width, height);
         bmd.ctx.fillStyle = color;
@@ -128,7 +123,13 @@
         return bmd;
     }
 
-    function createBrick(row, col) {
+    function createModalLayer() {
+        var modal = entities.create(0, 0, createRect(game.width, game.height, 'rgba(25, 25, 25, 0.9)')); 
+        modal.bringToTop();
+        return modal;
+    }
+
+    function createBrick(row, col, type) {
 
         var brick = bricksGroup.getFirstDead();
         var x = col * Config.board.celWidth;
@@ -162,7 +163,7 @@
         brick.dying = false;
         brick.selectable = true;
         brick._reborn = false;
-        brick._type = false;
+        brick._type = type || false;
 
         bricks[row][col] = brick;
 
@@ -179,7 +180,6 @@
     }
 
     function setRandomFrame(brick) {
-        // brick.frame = game.rnd.integerInRange(0, 2);
         brick.frame = game.rnd.integerInRange(0, 4);
     }
 
@@ -199,10 +199,10 @@
                 return true; 
             }
         }
-        
+
         selectedBrick = brick; 
     }
- 
+
     function inputMove(input, x, y, fromClick) {
 
         if (!selectedBrick || !selectedBrick.selectable || !pointer.start) return;
@@ -256,56 +256,22 @@
             var brickSameColor = getSameColor(brick);
             var bricksMatch = [];
 
-            if (selectedBrickSameColor.length >= Config.minScore || brickSameColor.length >= Config.minScore) {
+            if (selectedBrickSameColor.length >= Config.score.minMatches || brickSameColor.length >= Config.score.minMatches) {
 
-                if (selectedBrickSameColor.length > Config.minScore) {
-                    selectedBrick._reborn = 'bomb';
+                if (selectedBrickSameColor.length > Config.score.minMatches) {
+                    selectedBrick._reborn = true;
                 }
 
-                if (brickSameColor.length > Config.minScore) {
-                    brick._reborn = 'bomb';
+                if (brickSameColor.length > Config.score.minMatches) {
+                    brick._reborn = true;
                 }
 
-                if (selectedBrickSameColor.length >= Config.minScore) {
-
+                if (selectedBrickSameColor.length >= Config.score.minMatches) {
                     bricksMatch = bricksMatch.concat(selectedBrickSameColor.matches);
-
-                    var showNumbers = true;
-
-                    for (var i = 0, len = selectedBrickSameColor.matches.length; i < len; i++) {
-                        if (selectedBrickSameColor.matches[i]._type === 'bomb') {
-                            showNumbers = false;
-                        }
-                    }
-
-                    if (showNumbers) {
-                        createScoreNumber(
-                            (selectedBrick.col * Config.board.celWidth) + selectedBrick.width/2, 
-                            (selectedBrick.row * Config.board.celHeight) + selectedBrick.height/2, 
-                            selectedBrickSameColor.length * 10
-                        );
-                    }
                 }
 
-                if (brickSameColor.length >= Config.minScore) {
-
+                if (brickSameColor.length >= Config.score.minMatches) {
                     bricksMatch = bricksMatch.concat(brickSameColor.matches);
-
-                    var showNumbers = true;
-
-                    for (var i = 0, len = brickSameColor.matches.length; i < len; i++) {
-                        if (brickSameColor.matches[i]._type === 'bomb') {
-                            showNumbers = false;
-                        }
-                    }
-
-                    if (showNumbers) {
-                        createScoreNumber(
-                            (brick.col * Config.board.celWidth) + brick.width/2, 
-                            (brick.row * Config.board.celHeight) + brick.height/2, 
-                            brickSameColor.length * 10
-                        );
-                    }
                 }
 
 
@@ -341,7 +307,7 @@
 
         move(selectedBrick);
         move(brick, function() {
-            processMatches(matches);
+            processMatches(removeDuplicates(matches));
         });
     }
 
@@ -356,7 +322,7 @@
         var ease = ease || Phaser.Easing.Linear.None;
 
         return animation(brick, { to: { x: x, y: y }, time: time, ease: ease, done : function() {
-        
+
             brick.selectable = true;
 
             if (callback) {
@@ -406,21 +372,27 @@
             y : brick.y + (brick.height * 0.25)
         };
 
-        if (brick._type === 'explode') {
-            // to = {
-            //     alpha : 0,
-            // }
-            // time = 1250;
-        }
-
         animation(brick, { to: to, time: time, ease: Phaser.Easing.Linear.None, done: function() {
-        
+
+            if (brick._type == 'clock') {
+
+                var text = game.add.bitmapText(timeBar.x, timeBar.y + timeBar.height/2, 'font', '+5s', 30);
+                text.anchor.setTo(0.5);
+
+                var textAnim = game.add.tween(text);
+                textAnim.to({x: text.x + 100, alpha : 0}, 500, Phaser.Easing.Linear.None);
+                textAnim.onComplete.add(function() {
+                    text.destroy();
+                });
+                textAnim.start();
+            }
+
             brick.kill();
             bricks[brick.row][brick.col] = null;
 
-            if (brick._reborn === 'bomb') {
+            if (brick._reborn) {
 
-                var brickReborn = createBrickBomb(brick.row, brick.col);
+                var brickReborn = createSpecialBrick(brick.row, brick.col);
                 var brickRebornAnim = game.add.tween(brickReborn.scale);
 
                 brickReborn.scale.setTo(0.2);
@@ -436,8 +408,6 @@
     }
 
     function findMatches() {
-
-        console.log('findMatches()');
 
         'use strict';
 
@@ -458,7 +428,7 @@
 
                 var brickSameColor = getSameColor(brick);
 
-                if (brickSameColor.matches.length < Config.minScore) {
+                if (brickSameColor.matches.length < Config.score.minMatches) {
                     continue;
                 }
 
@@ -474,8 +444,8 @@
                         continue;
                     }
 
-                    if (brickSameColor.matches.length > Config.minScore) {
-                        brick._reborn = 'bomb';
+                    if (brickSameColor.matches.length > Config.score.minMatches) {
+                        brick._reborn = true;
                     }
 
                     keys[brickMatch.row][brickMatch.col] = true;
@@ -524,10 +494,8 @@
 
     function explode(brickBomb) {
 
-        console.log('explode()');
-
-        var callback = false;
-        var scored = 0;
+        brickBomb._type = 'explode';
+        var matches = [brickBomb];
         var _row = brickBomb.row, _col = brickBomb.col;
 
         var horizontalRect = createRect(Config.board.width, Config.brick.width * 0.7, 'rgba(255, 255, 255, 0.5)');
@@ -585,90 +553,50 @@
 
             var brick = getBrick(row, _col);
 
-            if (brick && !brick.dying) {
-
-                if (brick._type === 'bomb' && brick != brickBomb) {
-                    brick._type = 'explode';
-                    explode(brick);
-                    continue;
-                } 
-
-                scored += 10;
-                brick._type = 'explode';
-                killBrick(brick, callback);
+            if (!brick || brick.dying || brick == brickBomb) {
+                continue;
             }
+
+            brick._type = 'explode';
+            matches.push(brick);
         }
 
         for (var col = 0; col < Config.board.cols; col++) {
 
-            if (col == _col) {
+            var brick = getBrick(_row, col);
+
+            if (!brick || brick.dying || brick == brickBomb) {
                 continue;
             }
 
-            if (col == Config.board.cols - 1) {
-                callback = function() {
-                    unfrozenBoard();
-                    drop();
-                }
-            }
-
-            var brick = getBrick(_row, col);
-
-            if (brick && !brick.dying) {
-
-                if (brick._type === 'bomb' && brick != brickBomb) {
-                    brick._type = 'explode';
-                    explode(brick);
-                    continue;
-                } 
-
-                scored += 10; 
-                brick._type = 'explode';
-                killBrick(brick, callback);
-            }
+            brick._type = 'explode';
+            matches.push(brick);
         }
 
-        createScoreNumber(
-            (_col * Config.board.celWidth) + Config.brick.width/2, 
-            (_row * Config.board.celHeight) + Config.brick.height/2, 
-            scored
-        );
-
-        score += scored;
-        updateScore();
-
-        if (!callback) {
-            return process.nextTick(drop);
-        }
+        return processMatches(matches, true);
     } 
 
-    function processMatches(bricksArray) {
-
-        console.log('processMatches()');
+    function processMatches(bricksArray, background) {
 
         if (currentstate !== STATES.PLAY || bricksArray.length == 0) {
-            return false;
+            return 0;
         }
 
-        if (process.queue.has('processMatches')) {
-            console.error('processMatches again?');
-            return process.nextTick(processMatches, [bricksArray]);
-        } 
-
-        process.queue.add('processMatches');
-
         var 
-            bricksArray = removeDuplicates(bricksArray), 
             length = bricksArray.length,
             last = length - 1, 
-            scored = 0
+            scored = 0,
+            specialDouble = 0,
+            specialClock = 0
         ;
 
         if (length == 0) {
-            return false;
+            return scored;
         }
 
         frozenBoard();
+
+        var _row = bricksArray[0].row, _col = bricksArray[0].col;
 
         for (var index = 0; index < length; index++) {
 
@@ -683,32 +611,72 @@
             }
 
             if (brick._type === 'bomb') {
-                explode(brick);
+
+                scored += explode(brick);
+
+                if (bricksArray[0]._type !== 'bomb') {
+                    _row = brick.row;
+                    _col = brick.col;
+                }
+
                 continue;
             } 
 
-            scored += 10;
+            if (brick._type === 'double') {
+                specialDouble += Config.specials.double;
+            } 
+
+            if (brick._type === 'clock') {
+                specialClock += Config.specials.clock;
+            }
+
+            scored += Config.score.point;
             killBrick(brick, callback);
         }
 
-        // countDown += length/4;
-        score += scored;
+        if (!background) {
 
-        updateScore();
-        sounds.score.play();
+            var scoredText = scored;
 
-        process.queue.remove('processMatches');
+            if (specialDouble) {
+
+                scoredText = String(specialDouble) + 'x' + String(scored);
+                scored *= specialDouble;
+            }
+
+            if (specialClock) {
+
+                var bonus = Config.specials.clock;
+
+                countDown += bonus;
+                timeBar.percent = timeBar.updateTime / countDown * 100;
+
+                var diff = Math.round(timeBar.width / Math.round(countDown/bonus));
+                timeBar.width = Math.min(timeBar.width + diff, Config.timeBar.width);
+                timeBar.subTimeBar = timeBar.width * timeBar.percent/100; 
+            }
+
+            score += scored;
+
+            sounds.score.play();
+            updateScore();
+
+            createScoreNumber(
+                (_col * Config.board.celWidth) + Config.brick.width/2, 
+                (_row * Config.board.celHeight) + Config.brick.height/2, 
+                scoredText
+            ); 
+        }
+
+        return scored;
     }
 
     function drop() {
-
-        console.log('drop()');
 
         var time = 200;
         var ease = Phaser.Easing.Bounce.Out;
         var moves = [];
 
-        console.log('drop() 1.0');
         for (var col = 0; col < Config.board.cols; col++) {
 
             var dropRowCount = 0;
@@ -756,17 +724,13 @@
 
         }
 
-        console.log('drop() 1.1');
         var length = moves.length, last = length - 1; 
 
         if (length == 0) {
-            console.log('drop() 1.2');
             return false;
         }
 
-        console.log('drop() 1.3');
         frozenBoard();
-        console.log('drop() 1.4');
 
         for (var index = 0; index < length; index++) {
 
@@ -776,10 +740,10 @@
             if (index == last) {
                 callback = function() {
                     
-                    console.log('drop() 1.6');
-                    unfrozenBoard();
                     var matches = findMatches();
                     if (matches.length == 0) {
+                        
+                        unfrozenBoard();
                         return process.nextTick(drop);
                     }
                     return processMatches(matches);
@@ -788,7 +752,6 @@
 
             move(brick, callback, time, ease);
         }
-        console.log('drop() 1.5');
     }
 
     function getSameColor(brick) {
@@ -801,11 +764,11 @@
         vertical = vertical.concat(getSameColorByDirection(brick, -1, 0));
         vertical = vertical.concat(getSameColorByDirection(brick, 1, 0));
 
-        if (horizontal.length >= Config.minScore) {
+        if (horizontal.length >= Config.score.minMatches) {
             result = result.concat(horizontal);
         }
 
-        if (vertical.length >= Config.minScore) {
+        if (vertical.length >= Config.score.minMatches) {
             result = result.concat(vertical);
         }
 
@@ -847,25 +810,36 @@
         scoreText.setText(String(score));
     }
 
-    function createScoreNumber(x, y, scored, caller) {
+    function createScoreNumber(x, y, text, type) {
 
+        var type = type || 'score';
         var scoreNumberText = scoreNumberGroup.getFirstDead();
 
         if (!scoreNumberText) {
 
-            scoreNumberText = game.add.bitmapText(x, y, 'font', String(scored), 50);
+            scoreNumberText = game.add.bitmapText(x, y, 'font', String(text), 50);
             scoreNumberText.anchor.setTo(0.5);
             scoreNumberGroup.add(scoreNumberText);
 
         } else {
             scoreNumberText.position.setTo(x, y);
             scoreNumberText.alpha = 1;
-            scoreNumberText.setText(scored);
+            scoreNumberText.setText(text);
             scoreNumberText.revive();
         }
+        
+        if (scoreNumberText.x <= scoreNumberText.width/2) {
+            scoreNumberText.x = scoreNumberText.width/2;
+        }
 
-        scoreNumberTextAnim = game.add.tween(scoreNumberText);
-        scoreNumberTextAnim.to({alpha: 0, y: scoreNumberText.y - 100}, 1000, Phaser.Easing.Linear.None);
+        if (scoreNumberText.x + scoreNumberText.width/2 >= Config.board.width) {
+            scoreNumberText.x = Config.board.width - scoreNumberText.width/2;
+        }
+
+        var to = {alpha: 0, y: scoreNumberText.y - 100}
+
+        var scoreNumberTextAnim = game.add.tween(scoreNumberText);
+        scoreNumberTextAnim.to(to, 1000, Phaser.Easing.Linear.None);
         scoreNumberTextAnim.onComplete.add(function() {
             scoreNumberText.kill();
         });
@@ -876,16 +850,114 @@
         
         console.log('gameover()');
         currentstate = STATES.GAME_OVER;
+
+        best = Math.max(score, best);
+        localStorage.setItem('best', best); 
+
+        var layer = createModalLayer();
+
         countDownTimer.pause();
         frozenBoard();
+
+        var gameOverText = game.add.bitmapText(game.world.centerX, game.world.centerY, 'font', 'GAME OVER', 66);
+        gameOverText.anchor.setTo(0.5); 
+        gameOverText.alpha = 0;
+        gameOverText.y -= gameOverText.height * 2;
+
+        var textScore = game.add.bitmapText(game.world.centerX, game.height, 'font', 'SCORE: ' + score, 33);
+        textScore.anchor.setTo(0.5);
+        textScore.alpha = 0.6;
+        textScore.y -= textScore.height;
+
+        var restartText = game.add.bitmapText(0, 0, 'font', 'TRY AGAIN', 30); 
+        restartText.anchor.setTo(0.5);
+        restartText.alpha = 0.7;
+
+        var padding = 24;
+        var restartTextRect = game.add.sprite(
+            game.world.centerX,
+            gameOverText.y + gameOverText.height + 100,
+            createRect(restartText.width + padding, restartText.height + padding, '#333')
+        );
+
+        restartTextRect.anchor.setTo(0.5);
+        restartTextRect.inputEnabled = true;
+        restartTextRect.events.onInputDown.add(restart);
+        restartTextRect.addChild(restartText);
+        restartTextRect.alpha = 0;
+
+        var restartTextTween = game.add.tween(restartTextRect);
+        restartTextTween.to({alpha : 1}, 1000, Phaser.Easing.Linear.None);
+
+        var gameOverTextTween = game.add.tween(gameOverText);
+        gameOverTextTween.to({alpha: 1}, 3000, Phaser.Easing.Bounce.Out);
+
+        gameOverTextTween.start();
+
+        var timer = game.time.create(this.game);
+        timer.add(2000, function() {
+            restartTextTween.start();
+        });
+        timer.start();
+
+        temporaryObjects.add(layer);
+        temporaryObjects.add(restartTextRect);
+        temporaryObjects.add(gameOverText);
+        temporaryObjects.add(textScore);
     }
 
     function pause() {
 
         console.log('paused()');
         currentstate = STATES.PAUSED;
+
+        temporaryObjects.add(createModalLayer())
+
         countDownTimer.pause();
         frozenBoard(); 
+
+        var menus = [
+            {
+                text : 'RESUME', 
+                inputDown: resume
+            },
+            {
+                text : 'MENU', 
+                inputDown: function() {
+
+                    window.document.location.href = window.document.location.href;
+
+                    // @todo - trocar para phaeser dev 2.4
+                    // game.state.start('menu'); 
+                }
+            },
+        ];
+
+        var padding = 24;
+        var marginTop = game.world.centerY - 100;
+
+        for (var i = 0, len = menus.length; i < len; i++) {
+            
+            var menu = menus[i];
+            var text = game.add.bitmapText(0, 0, 'font', menu.text, 30);
+            text.anchor.setTo(0.5)
+            text.alpha = 0.7;
+
+            var textRect = game.add.sprite(
+                game.world.centerX,
+                marginTop,
+                createRect(text.width + padding, text.height + padding, '#333')
+            );
+
+            textRect.anchor.setTo(0.5);
+            textRect.inputEnabled = true;
+            textRect.events.onInputDown.add(menu.inputDown);
+            textRect.addChild(text);
+
+            marginTop = textRect.y + 90;
+
+            temporaryObjects.add(textRect);
+        }
     }
 
     function resume() {
@@ -894,15 +966,16 @@
         currentstate = STATES.PLAY;
         countDownTimer.resume();
         unfrozenBoard(); 
-    }
+        cleanTemporaryObjects();
+    }                                              
 
     function restart() {
 
         console.log('restart');
+        
+        cleanTemporaryObjects();
 
-        countDown = Config.countDown;
         score = 0;
-        countDownTimer.resume();
 
         createTimeBar();
         updateScore();
@@ -911,24 +984,40 @@
         removeInitialMatches();
         createDropAnimationStart(); 
 
-        resume();
+        currentstate = STATES.PLAY;
+        unfrozenBoard(); 
+    }
+
+    function cleanTemporaryObjects() {
+
+        temporaryObjects.forEach(function(obj) {
+            obj.kill();
+        });
+
+        temporaryObjects.forEach(function(obj) {
+            obj.destroy();
+        });
     }
     
     function shuffle() {
         bricksGroup.forEachAlive(function(brick) {
+            brick.removeChildren();
             setRandomFrame(brick);
         });
     }
     
     function frozenBoard() {
-        console.log('frozenBoard()');
         bricksGroup.forEachAlive(function(brick) {
             brick.inputEnabled = false;
         });
     }
 
     function unfrozenBoard() {       
-        console.log('unfrozenBoard()');
+
+        if (currentstate === STATES.GAME_OVER) {
+            return false;
+        }
+
         bricksGroup.forEachAlive(function(brick) {
             brick.inputEnabled = true;
         });
@@ -1016,8 +1105,6 @@
             anim.time = anim.time || 200;
             anim.ease = anim.ease || Phaser.Easing.Linear.None;
 
-            // anim.time = 2000;
-
             brick.tweens = brick.tweens || [];
             brick.tweens.push(anim);
 
@@ -1036,6 +1123,8 @@
 
         create: function() {
 
+            console.log('game.create');
+
             // disable auto pause on window blur
             // game.stage.disableVisibilityChange = true;
 
@@ -1045,16 +1134,10 @@
             // fpsText = game.add.text(0, 5, '00', {font: '16px Arial', fill: '#333'});
             // fpsText.x = game.width - fpsText.width - 5;
 
-            entities = game.add.group();
-
             game.input.addMoveCallback(inputMove, this);
 
             game.input.onDown.add(function(input, event) {
                 pointer.start = {x : input.position.x, y : input.position.y};
-
-                if (currentstate === STATES.GAME_OVER) {
-                    restart();
-                }
             }, this);
 
             game.input.onUp.add(function(input, event) {
@@ -1062,15 +1145,11 @@
                 pointer.end = {x : input.position.x, y : input.position.y};
             }, this);
 
-            createBoard();
-
             sounds = {
                 score : game.add.audio('score'),
                 moveInvalid : game.add.audio('move-invalid'),
                 explosion : game.add.audio('explosion')
             };
-
-            scoreText = game.add.bitmapText(Config.board.x, 10, 'font', String(score), 40);
 
             btnPause = game.add.button(game.width - game.cache.getImage('btn-pause').width, 5, 'btn-pause', pause);
             btnPause.x -= btnPause.width - 15;
@@ -1081,6 +1160,13 @@
                 shakeX: true,
                 shakeY: true
             });
+
+            score = 0;
+            scoreText = game.add.bitmapText(Config.board.x, 10, 'font', String(score), 40);
+
+            entities = game.add.group();
+            temporaryObjects = game.add.group(); 
+            createBoard();
         },
 
         update : function() { 

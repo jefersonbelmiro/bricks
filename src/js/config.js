@@ -6,8 +6,20 @@
         height : 104,
     };
 
+    var score = {
+        minMatches : 3,
+        point : 10,
+    };
+
     var topBar = {
         height : 85,
+    };
+
+    var specials = {
+        // times to multiply
+        double :  2,
+        // seconds to add to timer
+        clock : 5
     };
 
     var board = {
@@ -25,7 +37,7 @@
     var timeBar = {
         width : board.width,
         height : 32,
-        x : 3,//board.x + board.width,
+        x : board.x,
         y: board.y + board.height,
         countDown: 120
     };
@@ -40,7 +52,8 @@
         width : width,
         height : height,
 
-        minScore : 3,
+        score : score,
+        specials : specials,
 
         brick : brick,
         board : board,
