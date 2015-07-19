@@ -1,5 +1,7 @@
 ;(function(exports) {
 
+    var game;
+
     function createRect(width, height, color) {
 
         var bmd = game.add.bitmapData(width, height);
@@ -12,8 +14,9 @@
         return bmd;
     }
 
-    var Menu = function(game) {
-        this.game = game;
+    var Menu = function(_game) {
+        this.game = _game;
+        game = _game;
     }    
 
     Menu.prototype = {

@@ -1,7 +1,7 @@
 ;(function(exports) {
 
     var brick = {
-        margin: 10, //4,
+        margin: 10, 
         width : 104,
         height : 104,
     };

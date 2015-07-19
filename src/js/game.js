@@ -1,7 +1,6 @@
-// ;(function(global) {
-//
-//     'use strict';
-    var global = this;
+;(function(global) {
+
+    'use strict';
 
     var 
         game, 
@@ -46,7 +45,6 @@
     function createTimeBar() {
 
         countDown = Config.timeBar.countDown;
-        console.log('createTimeBar', countDown);
 
         if (!timeBar) {
             timeBar = game.add.tileSprite(
@@ -64,8 +62,6 @@
 
         if (countDownTimer) {
             countDownTimer.destroy();
-            console.log('countDownTimer', countDownTimer)
-            // return countDownTimer.resume();
         } 
 
         countDownTimer = game.time.create(false);
@@ -73,7 +69,6 @@
 
             countDown -= timeBar.updateTime;
             timeBar.width -= timeBar.subTimeBar;
-            console.log('ha');
 
             if (countDown <= 0) {
                 gameOver();
@@ -848,7 +843,6 @@
     
     function gameOver() {
         
-        console.log('gameover()');
         currentstate = STATES.GAME_OVER;
 
         best = Math.max(score, best);
@@ -908,7 +902,6 @@
 
     function pause() {
 
-        console.log('paused()');
         currentstate = STATES.PAUSED;
 
         temporaryObjects.add(createModalLayer())
@@ -962,7 +955,6 @@
 
     function resume() {
 
-        console.log('resume()');
         currentstate = STATES.PLAY;
         countDownTimer.resume();
         unfrozenBoard(); 
@@ -971,8 +963,6 @@
 
     function restart() {
 
-        console.log('restart');
-        
         cleanTemporaryObjects();
 
         score = 0;
@@ -1123,8 +1113,6 @@
 
         create: function() {
 
-            console.log('game.create');
-
             // disable auto pause on window blur
             // game.stage.disableVisibilityChange = true;
 
@@ -1178,6 +1166,6 @@
 
     } 
 
-//     global.Game = Game;
-//
-// })(this);
+    global.Game = Game;
+
+})(this);
