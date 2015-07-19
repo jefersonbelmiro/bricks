@@ -876,7 +876,11 @@
 
         restartTextRect.anchor.setTo(0.5);
         restartTextRect.inputEnabled = true;
-        restartTextRect.events.onInputDown.add(restart);
+        restartTextRect.events.onInputDown.add(function() {
+            if (restartTextRect.alpha > 0.5) {
+                restart();
+            }
+        });
         restartTextRect.addChild(restartText);
         restartTextRect.alpha = 0;
 
@@ -888,8 +892,8 @@
 
         gameOverTextTween.start();
 
-        var timer = game.time.create(this.game);
-        timer.add(2000, function() {
+        var timer = game.time.create(game);
+        timer.add(1000, function() {
             restartTextTween.start();
         });
         timer.start();
