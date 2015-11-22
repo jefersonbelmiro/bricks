@@ -3,13 +3,14 @@
     <description>
         pixel bricks game
     </description>
-    <author email="jeferson.belmiro@gmail.com" href="http://jeferson.belmiro.com">
+    <author email="jeferson.belmiro@gmail.com" href="http://jefersonbelmiro.com">
         pixel bricks team
     </author>
     <content src="index.html" />
     <access origin="*" />
     <preference name="orientation" value="portrait" />
     <preference name="permissions" value="none" />
+    <icon src="src/img/icon.png" />
     <platform name="android">
         <preference name="orientation" value="portrait" />
     </platform>

@@ -8,7 +8,7 @@
         bricks = {}, selectedBrick,  
         currentstate, STATES = { PAUSED: 'paused', PLAY: 'play', SCORE: 'score', GAME_OVER: 'game_over' }, 
         fpsText, scoreText,
-        score = 0, best = localStorage.getItem('best') || 0, 
+        score = 0, best = localStorage.getItem('pixel_bricks_best') || 0, 
         sounds,
         btnPause,
         timeBar, countDownTimer, countDown,
@@ -846,7 +846,7 @@
         currentstate = STATES.GAME_OVER;
 
         best = Math.max(score, best);
-        localStorage.setItem('best', best); 
+        localStorage.setItem('pixel_bricks_best', best); 
 
         var layer = createModalLayer();
 
