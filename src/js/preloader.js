@@ -19,7 +19,6 @@
             this.load.setPreloadSprite(preloadBar);
 
             this.load.atlasJSONHash('bricks', 'src/img/bricks.png', 'src/json/bricks.json');
-            this.load.atlasJSONHash('buttons', 'src/img/buttons.png', 'src/json/buttons.json');
 
             this.load.image('btn-pause', 'src/img/btn-pause.png');
             this.load.image('bomb', 'src/img/bomb.png');

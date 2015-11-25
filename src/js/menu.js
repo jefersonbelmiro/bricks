@@ -44,7 +44,7 @@
                 this.state.start('game'); 
             }, this);
             
-            var best = localStorage.getItem('best') || 0;  
+            var best = localStorage.getItem('pixel_bricks_best') || 0;  
             var textScore = game.add.bitmapText(game.world.centerX, game.height, 'font', 'HIGHSCORE: ' + best, 33);
             textScore.anchor.setTo(0.5);
             textScore.y -= textScore.height;

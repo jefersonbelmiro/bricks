@@ -178,6 +178,21 @@
         brick.frame = game.rnd.integerInRange(0, 4);
     }
 
+    function hightlight(brick) {
+
+        if (!brick.hightlight) {
+            brick.highlightTween = game.add.tween(brick.scale).to({
+                x: 1.2,
+                y: .8
+            }, 100, Phaser.Easing.Cubic.Out).to({
+                x: 1,
+                y: 1
+            }, 300, Phaser.Easing.Back.Out);
+        }
+        brick.scale.set(1, 1)
+        brick.highlightTween.start();
+    }
+
     function inputDown(brick, input) {
 
         if (!brick.selectable) return false;
@@ -840,13 +855,18 @@
         });
         scoreNumberTextAnim.start();
     }
+
+    function saveBestScore() {
+    
+        best = Math.max(score, best);
+        localStorage.setItem('pixel_bricks_best', best); 
+    }
     
     function gameOver() {
         
         currentstate = STATES.GAME_OVER;
 
-        best = Math.max(score, best);
-        localStorage.setItem('pixel_bricks_best', best); 
+        saveBestScore();
 
         var layer = createModalLayer();
 
@@ -922,6 +942,7 @@
                 text : 'MENU', 
                 inputDown: function() {
 
+                    saveBestScore()
                     window.document.location.href = window.document.location.href;
 
                     // @todo - trocar para phaeser dev 2.4
