@@ -1,4 +1,5 @@
-<widget id="com.belmiro.bricks" version="0.0.1">
+<?xml version="1.0" encoding="UTF-8" ?>
+<widget id="com.belmiro.bricks" version="1.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:gap="http://phonegap.com/ns/1.0">
     <name>Bricks</name>
     <description>
         pixel bricks game
@@ -7,11 +8,11 @@
         pixel bricks team
     </author>
     <content src="index.html" />
-    <access origin="*" />
-    <preference name="orientation" value="portrait" />
     <preference name="permissions" value="none" />
+    <preference name="orientation" value="portrait" />
     <icon src="src/img/icon.png" />
     <platform name="android">
+        <preference name="permissions" value="none" />
         <preference name="orientation" value="portrait" />
     </platform>
 </widget>
